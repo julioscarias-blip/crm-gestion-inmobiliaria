@@ -28,7 +28,8 @@ export default function ConfiguracionView({ agenteActual, onActualizarAgente, te
             rol: 'Agente Inmobiliario',
             especialidad: 'Venta Residencial & Asesoría',
             comision: '50%',
-            avatar_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80',
+            avatar_url: localStorage.getItem('crm_avatar_lorena') || '/foto-lorena.jpeg',
+            password: localStorage.getItem('crm_pass_lorena') || 'agente1234',
           });
         }
         return filtrados;
@@ -45,7 +46,8 @@ export default function ConfiguracionView({ agenteActual, onActualizarAgente, te
         rol: 'Administrador',
         especialidad: 'Dirección General & Captación',
         comision: '100%',
-        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+        avatar_url: localStorage.getItem('crm_avatar_julio') || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+        password: localStorage.getItem('crm_pass_julio') || 'admin1234',
       },
       {
         id: '00000000-0000-0000-0000-000000000002',
@@ -56,7 +58,8 @@ export default function ConfiguracionView({ agenteActual, onActualizarAgente, te
         rol: 'Agente Inmobiliario',
         especialidad: 'Venta Residencial & Asesoría',
         comision: '50%',
-        avatar_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80',
+        avatar_url: localStorage.getItem('crm_avatar_lorena') || '/foto-lorena.jpeg',
+        password: localStorage.getItem('crm_pass_lorena') || 'agente1234',
       },
     ];
   });
@@ -79,6 +82,8 @@ export default function ConfiguracionView({ agenteActual, onActualizarAgente, te
   const [comision, setComision] = useState('50%');
   const [slug, setSlug] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [password, setPassword] = useState('admin1234');
+  const [mostrarPassword, setMostrarPassword] = useState(false);
 
   // Estados de la agencia
   const [nombreInmobiliaria, setNombreInmobiliaria] = useState(
@@ -139,6 +144,7 @@ export default function ConfiguracionView({ agenteActual, onActualizarAgente, te
 
   // Galería de fotos predeterminadas
   const avataresPredefinidos = [
+    { label: 'Lorena Arias (Foto Real)', url: '/foto-lorena.jpeg' },
     { label: 'Ejecutiva 1', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80' },
     { label: 'Ejecutiva 2', url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=300&q=80' },
     { label: 'Ejecutivo 3', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80' },
@@ -170,7 +176,8 @@ export default function ConfiguracionView({ agenteActual, onActualizarAgente, te
             especialidad: 'Venta Residencial & Asesoría',
             comision: '50%',
             slug: 'lorena-arias',
-            avatar_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80',
+            avatar_url: localStorage.getItem('crm_avatar_lorena') || '/foto-lorena.jpeg',
+            password: localStorage.getItem('crm_pass_lorena') || 'agente1234',
           };
     } else {
       p = listaPerfiles.find((x) => x.id === perfilSeleccionadoId) || listaPerfiles[0];
@@ -184,7 +191,19 @@ export default function ConfiguracionView({ agenteActual, onActualizarAgente, te
       setEspecialidad(p.especialidad || 'Asesoramiento Inmobiliario');
       setComision(p.comision || '50%');
       setSlug(p.slug || '');
-      setAvatarUrl(p.avatar_url || avataresPredefinidos[0].url);
+      
+      const avatarResuelto =
+        p.email?.includes('lore') || p.nombre_completo?.includes('Lorena')
+          ? (localStorage.getItem('crm_avatar_lorena') || p.avatar_url || '/foto-lorena.jpeg')
+          : (p.avatar_url || avataresPredefinidos[0].url);
+      setAvatarUrl(avatarResuelto);
+
+      const passCargada =
+        p.password ||
+        localStorage.getItem('crm_pass_' + p.id) ||
+        localStorage.getItem('crm_pass_' + (p.email || '').toLowerCase()) ||
+        (p.rol?.toLowerCase().includes('admin') ? 'admin1234' : 'agente1234');
+      setPassword(passCargada);
     }
   }, [perfilSeleccionadoId, listaPerfiles, esAdmin, agenteActual]);
 
@@ -327,6 +346,7 @@ export default function ConfiguracionView({ agenteActual, onActualizarAgente, te
       nombre_completo: nombre.trim(),
       email: email.trim(),
       telefono_whatsapp: telefono.trim(),
+      password: password.trim(),
       rol: esAdmin ? rol : 'Agente Inmobiliario', // Solo el admin puede cambiar roles
       especialidad: especialidad.trim(),
       comision: comision.trim(),
@@ -341,11 +361,56 @@ export default function ConfiguracionView({ agenteActual, onActualizarAgente, te
 
     try {
       localStorage.setItem('crm_todos_los_agentes', JSON.stringify(nuevaLista));
-    } catch {}
+      localStorage.setItem('crm_avatar_' + idDestino, avatarUrl);
+      if (password.trim()) {
+        localStorage.setItem('crm_pass_' + idDestino, password.trim());
+        localStorage.setItem('crm_pass_' + email.trim().toLowerCase(), password.trim());
+      }
+      // Persistir avatar específico de Lorena
+      if (
+        idDestino === '00000000-0000-0000-0000-000000000002' ||
+        email.toLowerCase().includes('lore') ||
+        nombre.toLowerCase().includes('lorena') ||
+        slug === 'lorena-arias'
+      ) {
+        localStorage.setItem('crm_avatar_lorena', avatarUrl);
+        localStorage.setItem('crm_pass_lorena', password.trim() || 'agente1234');
+      }
+      // Persistir avatar específico de Julio
+      if (
+        idDestino === '00000000-0000-0000-0000-000000000001' ||
+        email.toLowerCase().includes('julio') ||
+        nombre.toLowerCase().includes('julio')
+      ) {
+        localStorage.setItem('crm_avatar_julio', avatarUrl);
+        localStorage.setItem('crm_pass_julio', password.trim() || 'admin1234');
+      }
+    } catch (errStore) {
+      console.warn('Error guardando en localStorage:', errStore);
+    }
 
     // Si editó su propio usuario actual, actualizar el CRM global
-    if (agenteActual?.id === perfilSeleccionadoId) {
+    if (agenteActual?.id === perfilSeleccionadoId || agenteActual?.email?.toLowerCase() === email.trim().toLowerCase()) {
       onActualizarAgente(perfilActualizado);
+    }
+
+    // Persistir en Supabase
+    try {
+      supabase.from('perfiles_agentes').upsert(
+        {
+          nombre_completo: perfilActualizado.nombre_completo,
+          email: perfilActualizado.email,
+          telefono_whatsapp: perfilActualizado.telefono_whatsapp,
+          slug: perfilActualizado.slug,
+          rol: perfilActualizado.rol.toLowerCase().includes('admin') ? 'administrador' : 'agente',
+          avatar_url: perfilActualizado.avatar_url,
+          activo: true,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'email' }
+      );
+    } catch (errDb) {
+      console.warn('Persistencia en Supabase:', errDb);
     }
 
     setGuardadoExitoso(true);
@@ -954,6 +1019,56 @@ export default function ConfiguracionView({ agenteActual, onActualizarAgente, te
                         : 'bg-[#11283d] text-slate-100 border-[#1d4063] focus:border-emerald-500'
                     }`}
                   />
+                </div>
+
+                {/* CONTRASEÑA DE ACCESO AL CRM CON BOTÓN PARA VER / OCULTAR */}
+                <div className="sm:col-span-2 mt-2 p-4 rounded-2xl border transition-all bg-gradient-to-r from-sky-50/70 via-indigo-50/40 to-blue-50/50 dark:from-slate-800/80 dark:via-slate-800/60 dark:to-slate-800/80 border-sky-200/80 dark:border-slate-700 shadow-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                    <div>
+                      <label className={`block font-black uppercase tracking-wider text-[11px] flex items-center gap-1.5 ${esClaro ? 'text-slate-800' : 'text-white'}`}>
+                        <span>🔑</span>
+                        <span>Contraseña de Acceso al CRM ({nombre || 'Usuario'})</span>
+                      </label>
+                      <p className={`text-[11px] mt-0.5 ${esClaro ? 'text-slate-500' : 'text-slate-400'}`}>
+                        Esta es la clave para ingresar a este perfil al iniciar sesión en el CRM.
+                      </p>
+                    </div>
+
+                    {/* BOTÓN PARA VER / OCULTAR CONTRASEÑA */}
+                    <button
+                      type="button"
+                      onClick={() => setMostrarPassword(!mostrarPassword)}
+                      className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white dark:bg-slate-700 text-[#0b4ea1] dark:text-sky-300 border border-sky-300 dark:border-slate-600 hover:bg-sky-50 dark:hover:bg-slate-600 shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                      title={mostrarPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                    >
+                      <span className="text-sm">{mostrarPassword ? '🙈' : '👁️'}</span>
+                      <span>{mostrarPassword ? 'Ocultar Contraseña' : 'Ver Contraseña'}</span>
+                    </button>
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type={mostrarPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Ingresa la contraseña..."
+                      className={`w-full rounded-2xl pl-10 pr-28 py-3 text-sm font-mono font-bold tracking-wider border transition-all ${
+                        esClaro
+                          ? 'bg-white text-slate-900 border-sky-300 focus:border-[#0b4ea1] focus:ring-2 focus:ring-[#0b4ea1]/20 shadow-xs'
+                          : 'bg-[#0b1c2e] text-white border-sky-500/50 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20'
+                      }`}
+                    />
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-slate-400">
+                      🔒
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setMostrarPassword(!mostrarPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer"
+                    >
+                      {mostrarPassword ? 'Ocultar' : 'Mostrar'}
+                    </button>
+                  </div>
                 </div>
 
               </div>

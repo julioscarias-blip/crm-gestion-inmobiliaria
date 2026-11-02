@@ -9,6 +9,29 @@ export default function LoginView({ onLoginSuccess }) {
   const [showPassword, setShowPassword] = useState(false);
   const [modalForgotOpen, setModalForgotOpen] = useState(false);
 
+  // Helpers para obtener avatares personalizados guardados
+  const getAvatarLorena = () => {
+    try {
+      const custom = localStorage.getItem('crm_avatar_lorena');
+      if (custom) return custom;
+      const agentes = JSON.parse(localStorage.getItem('crm_todos_los_agentes') || '[]');
+      const lore = agentes.find((a) => a.email?.includes('lore') || a.nombre_completo?.includes('Lorena'));
+      if (lore?.avatar_url) return lore.avatar_url;
+    } catch {}
+    return '/foto-lorena.jpeg';
+  };
+
+  const getAvatarAdmin = () => {
+    try {
+      const custom = localStorage.getItem('crm_avatar_julio');
+      if (custom) return custom;
+      const agentes = JSON.parse(localStorage.getItem('crm_todos_los_agentes') || '[]');
+      const j = agentes.find((a) => a.email?.includes('julio') || a.nombre_completo?.includes('Julio'));
+      if (j?.avatar_url) return j.avatar_url;
+    } catch {}
+    return 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80';
+  };
+
   // Perfil predeterminado del Administrador (Julio Arias)
   const perfilAdmin = {
     id: '00000000-0000-0000-0000-000000000001',
@@ -17,7 +40,7 @@ export default function LoginView({ onLoginSuccess }) {
     telefono_whatsapp: '+5492932530059',
     slug: 'julio-arias',
     rol: 'Administrador',
-    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+    avatar_url: getAvatarAdmin(),
   };
 
   // Perfil de la Agente (Lorena Arias)
@@ -28,7 +51,7 @@ export default function LoginView({ onLoginSuccess }) {
     telefono_whatsapp: '+5492932556677',
     slug: 'lorena-arias',
     rol: 'Agente Inmobiliario',
-    avatar_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80',
+    avatar_url: getAvatarLorena(),
   };
 
   // Manejador del submit del formulario
@@ -55,6 +78,8 @@ export default function LoginView({ onLoginSuccess }) {
             .maybeSingle();
 
           const esAdmin = perfilDb?.rol === 'administrador' || emailLimpio.includes('julio');
+          const avatarFinal = perfilDb?.avatar_url || (esAdmin ? getAvatarAdmin() : getAvatarLorena());
+
           const usuarioSupabase = {
             id: data.user.id,
             nombre_completo: data.user.user_metadata?.nombre || perfilDb?.nombre_completo || (esAdmin ? 'Julio Arias' : 'Lorena Arias'),
@@ -62,7 +87,7 @@ export default function LoginView({ onLoginSuccess }) {
             telefono_whatsapp: data.user.user_metadata?.telefono || perfilDb?.telefono_whatsapp || '+5492932530059',
             slug: data.user.user_metadata?.slug || perfilDb?.slug || 'asesor',
             rol: esAdmin ? 'Administrador' : 'Agente Inmobiliario',
-            avatar_url: perfilDb?.avatar_url || (esAdmin ? perfilAdmin.avatar_url : perfilLorena.avatar_url),
+            avatar_url: avatarFinal,
           };
           onLoginSuccess(usuarioSupabase);
           return;
@@ -79,6 +104,7 @@ export default function LoginView({ onLoginSuccess }) {
 
         if (perfilDb) {
           const esAdminDb = (perfilDb.rol || '').toLowerCase().includes('admin');
+          const avatarDb = perfilDb.avatar_url || (esAdminDb ? getAvatarAdmin() : getAvatarLorena());
           onLoginSuccess({
             id: perfilDb.id,
             nombre_completo: perfilDb.nombre_completo,
@@ -86,7 +112,7 @@ export default function LoginView({ onLoginSuccess }) {
             telefono_whatsapp: perfilDb.telefono_whatsapp,
             slug: perfilDb.slug,
             rol: esAdminDb ? 'Administrador' : 'Agente Inmobiliario',
-            avatar_url: perfilDb.avatar_url || (esAdminDb ? perfilAdmin.avatar_url : perfilLorena.avatar_url),
+            avatar_url: avatarDb,
           });
           return;
         }
@@ -94,10 +120,40 @@ export default function LoginView({ onLoginSuccess }) {
         console.warn('Consulta perfiles_agentes:', errDb);
       }
 
-      // 3. Reconocimiento según el correo ingresado
+      // 3. Revisar si el perfil fue editado y guardado en localStorage ('crm_todos_los_agentes')
+      try {
+        const guardados = localStorage.getItem('crm_todos_los_agentes');
+        if (guardados) {
+          const list = JSON.parse(guardados);
+          const found = list.find(
+            (a) =>
+              a.email?.toLowerCase() === emailLimpio ||
+              (emailLimpio.includes('lore') && (a.email?.toLowerCase().includes('lore') || a.nombre_completo?.toLowerCase().includes('lorena'))) ||
+              (emailLimpio.includes('julio') && (a.email?.toLowerCase().includes('julio') || a.nombre_completo?.toLowerCase().includes('julio')))
+          );
+          if (found) {
+            const avatarResuelto =
+              (found.email?.includes('lore') || found.nombre_completo?.includes('Lorena'))
+                ? getAvatarLorena()
+                : (found.avatar_url || getAvatarAdmin());
+
+            onLoginSuccess({
+              ...found,
+              email: email.trim(),
+              avatar_url: avatarResuelto,
+            });
+            return;
+          }
+        }
+      } catch (errLocal) {
+        console.warn('Error leyendo perfiles locales:', errLocal);
+      }
+
+      // 4. Reconocimiento según el correo ingresado
       if (emailLimpio.includes('lore') || emailLimpio.includes('agente')) {
         onLoginSuccess({
           ...perfilLorena,
+          avatar_url: getAvatarLorena(),
           email: email.trim(),
         });
         return;
@@ -106,6 +162,7 @@ export default function LoginView({ onLoginSuccess }) {
       if (emailLimpio.includes('julio') || emailLimpio.includes('admin')) {
         onLoginSuccess({
           ...perfilAdmin,
+          avatar_url: getAvatarAdmin(),
           email: email.trim(),
         });
         return;
@@ -124,7 +181,7 @@ export default function LoginView({ onLoginSuccess }) {
         telefono_whatsapp: '+5492932556677',
         slug: email.split('@')[0].toLowerCase(),
         rol: 'Agente Inmobiliario',
-        avatar_url: perfilLorena.avatar_url,
+        avatar_url: getAvatarLorena(),
       });
     } catch (err) {
       console.error('Error de login:', err);
@@ -349,7 +406,11 @@ export default function LoginView({ onLoginSuccess }) {
               Para ingresar al entorno del CRM, puedes usar las credenciales de tu cuenta de Supabase o la contraseña de acceso:
             </p>
             <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 mb-4 space-y-1 font-mono text-[11px]">
-              <p><strong>Admin:</strong> admin1234</p>
+              <p><strong>Admin (Julio):</strong> admin1234</p>
+              <p><strong>Agente (Lorena):</strong> agente1234</p>
+              <p className="text-[10px] text-slate-500 font-sans pt-1">
+                (Puedes ver y cambiar estas claves en la sección de Configuración).
+              </p>
             </div>
             <button
               onClick={() => setModalForgotOpen(false)}

@@ -27,14 +27,16 @@ export default function App() {
       if (guardado) {
         const u = JSON.parse(guardado);
         const emailLower = (u.email || '').toLowerCase();
-        // Si la sesión activa corresponde a Lorena, garantizar rol de Agente y nombre 'Lorena Arias'
+        // Si la sesión activa corresponde a Lorena, garantizar rol de Agente, nombre 'Lorena Arias' y su foto
         if (emailLower.includes('lore') || (u.nombre_completo || '').toLowerCase().includes('lore')) {
+          const avatarLorena = localStorage.getItem('crm_avatar_lorena') || u.avatar_url || '/foto-lorena.jpeg';
           const corregido = {
             ...u,
             id: u.id && u.id !== '00000000-0000-0000-0000-000000000001' ? u.id : '00000000-0000-0000-0000-000000000002',
             nombre_completo: 'Lorena Arias',
             rol: 'Agente Inmobiliario',
             slug: 'lorena-arias',
+            avatar_url: avatarLorena,
           };
           localStorage.setItem('crm_usuario_activo', JSON.stringify(corregido));
           return corregido;
@@ -147,6 +149,12 @@ export default function App() {
     setUsuarioAutenticado(perfilLimpio);
     try {
       localStorage.setItem('crm_usuario_activo', JSON.stringify(perfilLimpio));
+      if (perfilLimpio.slug === 'lorena-arias' || (perfilLimpio.email || '').toLowerCase().includes('lore') || (perfilLimpio.nombre_completo || '').toLowerCase().includes('lore')) {
+        localStorage.setItem('crm_avatar_lorena', perfilLimpio.avatar_url);
+      }
+      if ((perfilLimpio.email || '').toLowerCase().includes('julio') || (perfilLimpio.nombre_completo || '').toLowerCase().includes('julio')) {
+        localStorage.setItem('crm_avatar_julio', perfilLimpio.avatar_url);
+      }
     } catch {
       // ignore
     }

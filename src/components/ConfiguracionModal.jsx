@@ -12,7 +12,8 @@ export default function ConfiguracionModal({ isOpen, onClose, agenteActual, onAc
   const [avatarUrl, setAvatarUrl] = useState(
     agenteActual?.avatar_url ||
     'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
-  );
+  const [password, setPassword] = useState('admin1234');
+  const [showPassword, setShowPassword] = useState(false);
   const [guardadoOk, setGuardadoOk] = useState(false);
   const [cargandoArchivo, setCargandoArchivo] = useState(false);
 
@@ -24,12 +25,24 @@ export default function ConfiguracionModal({ isOpen, onClose, agenteActual, onAc
       setRol(
         agenteActual?.rol?.toLowerCase().includes('admin') ? 'Administrador' : (agenteActual?.rol || 'Agente')
       );
-      setAvatarUrl(agenteActual.avatar_url || '');
+      const avatarResuelto =
+        agenteActual?.email?.includes('lore') || agenteActual?.nombre_completo?.includes('Lorena')
+          ? (localStorage.getItem('crm_avatar_lorena') || agenteActual.avatar_url || '/foto-lorena.jpeg')
+          : (agenteActual.avatar_url || '');
+      setAvatarUrl(avatarResuelto);
+
+      const passCargada =
+        agenteActual.password ||
+        localStorage.getItem('crm_pass_' + agenteActual.id) ||
+        localStorage.getItem('crm_pass_' + (agenteActual.email || '').toLowerCase()) ||
+        (agenteActual.rol?.toLowerCase().includes('admin') ? 'admin1234' : 'agente1234');
+      setPassword(passCargada);
     }
   }, [agenteActual, isOpen]);
 
   // Avatares rápidos
   const avataresDemo = [
+    { label: 'Lorena Arias (Oficial)', url: '/foto-lorena.jpeg' },
     { label: 'Ejecutiva 1', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80' },
     { label: 'Ejecutiva 2', url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=300&q=80' },
     { label: 'Ejecutivo 3', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80' },
@@ -68,9 +81,26 @@ export default function ConfiguracionModal({ isOpen, onClose, agenteActual, onAc
       nombre_completo: nombre.trim(),
       email: email.trim(),
       telefono_whatsapp: telefono.trim(),
+      password: password.trim(),
       rol: rol.trim() || 'Administrador',
       avatar_url: avatarUrl,
     };
+
+    try {
+      if (perfilActualizado.id) {
+        localStorage.setItem('crm_avatar_' + perfilActualizado.id, avatarUrl);
+        localStorage.setItem('crm_pass_' + perfilActualizado.id, password.trim());
+      }
+      localStorage.setItem('crm_pass_' + email.trim().toLowerCase(), password.trim());
+      if (email.toLowerCase().includes('lore') || nombre.toLowerCase().includes('lorena')) {
+        localStorage.setItem('crm_avatar_lorena', avatarUrl);
+        localStorage.setItem('crm_pass_lorena', password.trim());
+      }
+      if (email.toLowerCase().includes('julio') || nombre.toLowerCase().includes('julio')) {
+        localStorage.setItem('crm_avatar_julio', avatarUrl);
+        localStorage.setItem('crm_pass_julio', password.trim());
+      }
+    } catch {}
 
     onActualizarAgente(perfilActualizado);
     setGuardadoOk(true);
@@ -226,6 +256,32 @@ export default function ConfiguracionModal({ isOpen, onClose, agenteActual, onAc
                 onChange={(e) => setTelefono(e.target.value)}
                 placeholder="+5492932530059"
                 className="w-full rounded-xl px-3.5 py-2.5 font-mono border border-slate-300 bg-slate-50/50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0b4ea1]/30 focus:border-[#0b4ea1]"
+              />
+            </div>
+          </div>
+
+          {/* CONTRASEÑA CON VISIBILIDAD */}
+          <div className="p-3.5 rounded-2xl bg-sky-50/70 border border-sky-200">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block font-bold uppercase tracking-wider text-[11px] text-slate-800">
+                🔑 Contraseña de Acceso al CRM
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="text-[11px] font-bold text-[#0b4ea1] hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>{showPassword ? '🙈' : '👁️'}</span>
+                <span>{showPassword ? 'Ocultar' : 'Ver Contraseña'}</span>
+              </button>
+            </div>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Contraseña"
+                className="w-full rounded-xl px-3.5 py-2 font-mono text-xs border border-sky-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0b4ea1]/30"
               />
             </div>
           </div>
